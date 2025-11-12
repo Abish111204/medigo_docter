@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:medigo_doctor/main.dart'; // For supabase
 import 'package:medigo_doctor/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'login_page.dart';
 import 'main_screen.dart';

@@ -14,8 +14,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'availability_page.dart';
 import 'language_page.dart';
 // Import only ManageLeavePage to avoid symbol conflicts if the other file also declares AvailabilityPage
-import 'manage_leave_page.dart' show ManageLeavePage;
-
+import 'package:medigo_doctor/pages/manage_leave_page.dart' show ManageLeavePage;
 
 class SettingsPage extends StatefulWidget {
   final int? doctorBigId;
@@ -37,7 +36,9 @@ class _SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving theme: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Error saving theme: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -49,50 +50,59 @@ class _SettingsPageState extends State<SettingsPage> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final theme = Theme.of(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
-    
+
     final user = supabase.auth.currentUser;
 
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
-          // --- Profile Header ---
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: theme.primaryColor.withOpacity(0.1),
-                child: Icon(
-                  Icons.person_outline,
-                  size: 32,
-                  color: theme.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user?.email ?? 'Doctor',
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          // --- Profile Header Card ---
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: theme.primaryColor.withOpacity(0.1),
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 32,
+                      color: theme.primaryColor,
                     ),
-                    Text(
-                      "MediGo Doctor",
-                      style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user?.email ?? 'Doctor',
+                          style: theme.textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          "MediGo Doctor",
+                          style: theme.textTheme.titleSmall
+                              ?.copyWith(color: Colors.grey),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ).animate().fadeIn(duration: 300.ms),
 
           const SizedBox(height: 24),
 
-          // --- Schedule Section ---
+          // --- MODIFIED: Styled Section Header ---
           Text(
             translations.schedule.toUpperCase(),
-            style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+            style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.secondary, // Use Teal
+                fontWeight: FontWeight.bold),
           ),
           Card(
             margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -114,30 +124,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                         leading: const Icon(Icons.event_busy_outlined),
-                         title: Text(translations.manageLeave),
-                         trailing: const Icon(Icons.chevron_right),
-                          onTap: () {
-                             if (widget.doctorBigId == null) return;
-                            Navigator.of(context).push(
-                         MaterialPageRoute(
-                         builder: (context) => ManageLeavePage(
+                  leading: const Icon(Icons.event_busy_outlined),
+                  title: Text(translations.manageLeave),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    if (widget.doctorBigId == null) return;
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => ManageLeavePage(
                           doctorBigId: widget.doctorBigId!,
-        ),
-      ),
-    );
-  },
-),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ).animate().fadeIn(delay: 100.ms),
 
           const SizedBox(height: 24),
 
-          // --- App Settings Section ---
+          // --- MODIFIED: Styled Section Header ---
           Text(
             translations.appSettings.toUpperCase(),
-            style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+            style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.secondary, // Use Teal
+                fontWeight: FontWeight.bold),
           ),
           Card(
             margin: const EdgeInsets.symmetric(vertical: 8.0),
@@ -145,7 +157,9 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 ListTile(
                   leading: Icon(
-                    isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                    isDarkMode
+                        ? Icons.dark_mode_outlined
+                        : Icons.light_mode_outlined,
                   ),
                   title: Text(translations.darkMode),
                   trailing: Switch(
@@ -155,6 +169,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           value ? ThemeMode.dark : ThemeMode.light);
                       _updateTheme(value);
                     },
+                    activeThumbColor: theme.colorScheme.secondary, // Use Teal
                   ),
                 ),
                 ListTile(
@@ -163,7 +178,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (context) => const LanguagePage()),
+                      MaterialPageRoute(
+                          builder: (context) => const LanguagePage()),
                     );
                   },
                 ),
@@ -186,7 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
               await supabase.auth.signOut();
               if (context.mounted) {
                 Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginPage()), 
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
                   (route) => false,
                 );
               }

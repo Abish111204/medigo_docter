@@ -988,6 +988,18 @@ abstract class AppLocalizations {
   /// **'Upload New Report'**
   String get uploadNewReport;
 
+  /// No description provided for @firstName.
+  ///
+  /// In en, this message translates to:
+  /// **'First Name'**
+  String get firstName;
+
+  /// No description provided for @lastName.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Name'**
+  String get lastName;
+
   /// No description provided for @availability.
   ///
   /// In en, this message translates to:

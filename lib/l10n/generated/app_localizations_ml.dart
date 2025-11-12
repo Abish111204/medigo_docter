@@ -476,6 +476,12 @@ class AppLocalizationsMl extends AppLocalizations {
   String get uploadNewReport => 'പുതിയ റിപ്പോർട്ട് അപ്‌ലോഡ് ചെയ്യുക';
 
   @override
+  String get firstName => 'ആദ്യ പേര്';
+
+  @override
+  String get lastName => 'അവസാന പേര്';
+
+  @override
   String get availability => 'ലഭ്യത';
 
   @override

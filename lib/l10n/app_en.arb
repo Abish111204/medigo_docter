@@ -175,6 +175,8 @@
     "uploadNewReport": "Upload New Report",
     "selectDate": "Select a date",
     "noAppointments": "No appointments on this day.",
+    "firstName": "First Name",
+    "lastName": "Last Name",
     
     "noteSaved": "Note saved!",
     "@@locale": "en",

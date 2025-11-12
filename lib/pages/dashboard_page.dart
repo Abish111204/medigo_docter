@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
 import 'package:medigo_doctor/main.dart';
+// --- THIS IS THE MISSING LINE ---
 import 'package:medigo_doctor/pages/appointment_details_page.dart';
+// --- END OF FIX ---
 import 'package:medigo_doctor/widgets/appointment_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -58,7 +60,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _refreshAppointments() {
-     if (widget.doctorBigId != null) {
+    if (widget.doctorBigId != null) {
       setState(() {
         _todayAppointmentsFuture = _fetchTodayAppointments(widget.doctorBigId!);
       });
@@ -68,29 +70,31 @@ class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
-    
+    final theme = Theme.of(context);
+
     if (widget.doctorBigId == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _refreshAppointments();
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                translations.todayAppointments, // <-- FIXED KEY
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+            child: Text(
+              translations.todayAppointments,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.secondary, // Use Teal
               ),
-            ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
-            Expanded(
+            ),
+          ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                _refreshAppointments();
+              },
               child: FutureBuilder<List<Map<String, dynamic>>>(
                 future: _todayAppointmentsFuture,
                 builder: (context, snapshot) {
@@ -103,15 +107,21 @@ class _DashboardPageState extends State<DashboardPage> {
                   final appointments = snapshot.data!;
                   if (appointments.isEmpty) {
                     return Center(
-                      child: Text(
-                        translations.noAppointmentsToday,
-                        style: Theme.of(context).textTheme.titleMedium,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          translations.noAppointmentsToday,
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ).animate().fadeIn(delay: 300.ms);
                   }
-                  
+
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 8.0),
                     itemCount: appointments.length,
                     itemBuilder: (context, index) {
                       final appointment = appointments[index];
@@ -132,15 +142,16 @@ class _DashboardPageState extends State<DashboardPage> {
                           }
                         },
                       )
-                      // This makes each card animate in
-                      .animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1, duration: 200.ms);
+                          .animate()
+                          .fadeIn(delay: (index * 50).ms)
+                          .slideX(begin: 0.1, duration: 200.ms);
                     },
                   );
                 },
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

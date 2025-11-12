@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
 import 'package:medigo_doctor/main.dart';
+// --- THIS IS THE MISSING LINE ---
 import 'package:medigo_doctor/pages/appointment_details_page.dart';
+// --- END OF FIX ---
 import 'package:medigo_doctor/widgets/appointment_card.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -23,11 +25,10 @@ class _SchedulePageState extends State<SchedulePage> {
   late Future<List<Map<String, dynamic>>> _appointmentsFuture;
   Map<String, List<Map<String, dynamic>>> _appointmentsCache = {};
 
-  // --- NEW: For the Notes feature ---
   final TextEditingController _noteController = TextEditingController();
   bool _isNoteLoading = false;
   bool _isNoteSaving = false;
-  Map<String, String> _notesCache = {};
+  final Map<String, String> _notesCache = {};
 
   @override
   void initState() {
@@ -52,7 +53,8 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchAppointmentsForMonth(DateTime month) async {
+  Future<List<Map<String, dynamic>>> _fetchAppointmentsForMonth(
+      DateTime month) async {
     if (widget.doctorBigId == null) return [];
 
     final firstDay = DateTime(month.year, month.month, 1);
@@ -65,10 +67,12 @@ class _SchedulePageState extends State<SchedulePage> {
           .eq('doctor_id', widget.doctorBigId!)
           .gte('appointment_date', firstDay.toIso8601String())
           .lte('appointment_date', lastDay.toIso8601String());
-      
+
       final appointments = (data as List).cast<Map<String, dynamic>>();
       _appointmentsCache = _groupAppointmentsByDay(appointments);
-      setState(() {}); // Update the UI with event markers
+      if (mounted) {
+        setState(() {}); // Update the UI with event markers
+      }
       return appointments;
     } catch (e) {
       print('Error fetching month appointments: $e');
@@ -76,7 +80,8 @@ class _SchedulePageState extends State<SchedulePage> {
     }
   }
 
-  Map<String, List<Map<String, dynamic>>> _groupAppointmentsByDay(List<Map<String, dynamic>> appointments) {
+  Map<String, List<Map<String, dynamic>>> _groupAppointmentsByDay(
+      List<Map<String, dynamic>> appointments) {
     Map<String, List<Map<String, dynamic>>> map = {};
     for (var app in appointments) {
       final day = app['appointment_date'];
@@ -99,14 +104,12 @@ class _SchedulePageState extends State<SchedulePage> {
         _selectedDay = selectedDay;
         _focusedDay = focusedDay;
       });
-      // Fetch the note for the newly selected day
       _fetchNoteForDay(selectedDay);
     }
   }
 
   void _onPageChanged(DateTime focusedDay) {
     _focusedDay = focusedDay;
-    // Fetch appointments for the new month
     _appointmentsFuture = _fetchAppointmentsForMonth(focusedDay);
   }
 
@@ -116,21 +119,22 @@ class _SchedulePageState extends State<SchedulePage> {
     });
   }
 
-  // --- NEW: Fetch the note for the selected day ---
   Future<void> _fetchNoteForDay(DateTime day) async {
     if (widget.doctorBigId == null) return;
-    setState(() { _isNoteLoading = true; });
-    
+    setState(() {
+      _isNoteLoading = true;
+    });
+
     final dateString = DateFormat('yyyy-MM-dd').format(day);
 
-    // Check cache first
     if (_notesCache.containsKey(dateString)) {
       _noteController.text = _notesCache[dateString]!;
-      setState(() { _isNoteLoading = false; });
+      setState(() {
+        _isNoteLoading = false;
+      });
       return;
     }
-    
-    // If not in cache, fetch from Supabase
+
     try {
       final data = await supabase
           .from('doctor_daily_notes')
@@ -142,54 +146,60 @@ class _SchedulePageState extends State<SchedulePage> {
       if (mounted) {
         final note = (data?['note_text'] as String?) ?? '';
         _noteController.text = note;
-        _notesCache[dateString] = note; // Save to cache
+        _notesCache[dateString] = note;
       }
     } catch (e) {
       print('Error fetching note: $e');
-      _noteController.text = ''; // Clear on error
+      _noteController.text = '';
     } finally {
       if (mounted) {
-        setState(() { _isNoteLoading = false; });
+        setState(() {
+          _isNoteLoading = false;
+        });
       }
     }
   }
 
-  // --- NEW: Save the note for the selected day ---
   Future<void> _saveNote() async {
     if (widget.doctorBigId == null || _selectedDay == null) return;
-    setState(() { _isNoteSaving = true; });
+    setState(() {
+      _isNoteSaving = true;
+    });
 
     final translations = AppLocalizations.of(context)!;
     final dateString = DateFormat('yyyy-MM-dd').format(_selectedDay!);
     final noteText = _noteController.text;
 
     try {
-      // 'upsert' will create a new note or update an existing one
-      await supabase
-          .from('doctor_daily_notes')
-          .upsert({
-            'doctor_id': widget.doctorBigId,
-            'note_date': dateString,
-            'note_text': noteText,
-          }, onConflict: 'doctor_id, note_date'); // Use the UNIQUE constraint
+      await supabase.from('doctor_daily_notes').upsert({
+        'doctor_id': widget.doctorBigId,
+        'note_date': dateString,
+        'note_text': noteText,
+      }, onConflict: 'doctor_id, note_date');
 
-      _notesCache[dateString] = noteText; // Update cache
+      _notesCache[dateString] = noteText;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(translations.noteSaved), backgroundColor: Colors.green),
+          SnackBar(
+              content: Text(translations.noteSaved),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving note: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Error saving note: $e'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
       if (mounted) {
-        setState(() { _isNoteSaving = false; });
-        FocusScope.of(context).unfocus(); // Hide keyboard
+        setState(() {
+          _isNoteSaving = false;
+        });
+        FocusScope.of(context).unfocus();
       }
     }
   }
@@ -198,20 +208,20 @@ class _SchedulePageState extends State<SchedulePage> {
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    
+
     if (widget.doctorBigId == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Scaffold(
-      body: ListView( // Use ListView to allow notes and appointments to scroll
+      body: ListView(
         padding: const EdgeInsets.all(0),
         children: [
-          // --- 1. STYLED CALENDAR ---
           Card(
             margin: const EdgeInsets.all(16.0),
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: TableCalendar(
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
@@ -220,45 +230,47 @@ class _SchedulePageState extends State<SchedulePage> {
               onDaySelected: _onDaySelected,
               onPageChanged: _onPageChanged,
               eventLoader: _getAppointmentsForDay,
-              // --- Professional Styling ---
               calendarStyle: CalendarStyle(
-                // Selected day
                 selectedDecoration: BoxDecoration(
-                  color: theme.primaryColor,
+                  color: theme.colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
-                selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                // Today
+                selectedTextStyle: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold),
                 todayDecoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.3),
+                  color: theme.colorScheme.secondary.withOpacity(0.3),
                   shape: BoxShape.circle,
                 ),
-                todayTextStyle: TextStyle(color: theme.textTheme.bodyLarge?.color),
-                // Event markers
+                todayTextStyle:
+                    TextStyle(color: theme.textTheme.bodyLarge?.color),
                 markerDecoration: BoxDecoration(
-                  color: theme.colorScheme.error,
+                  color: theme.colorScheme.secondary,
                   shape: BoxShape.circle,
                 ),
-                // Weekend/Outside day styling
-                weekendTextStyle: TextStyle(color: theme.colorScheme.error.withOpacity(0.7)),
+                markersAlignment: Alignment.bottomCenter,
+                markerSize: 5.0,
+                weekendTextStyle:
+                    TextStyle(color: theme.colorScheme.error.withOpacity(0.7)),
                 outsideDaysVisible: false,
               ),
               headerStyle: HeaderStyle(
                 formatButtonVisible: false,
                 titleCentered: true,
-                titleTextStyle: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
-                leftChevronIcon: Icon(Icons.chevron_left, color: theme.primaryColor),
-                rightChevronIcon: Icon(Icons.chevron_right, color: theme.primaryColor),
+                titleTextStyle: theme.textTheme.titleMedium!
+                    .copyWith(fontWeight: FontWeight.bold),
+                leftChevronIcon:
+                    Icon(Icons.chevron_left, color: theme.colorScheme.primary),
+                rightChevronIcon:
+                    Icon(Icons.chevron_right, color: theme.colorScheme.primary),
               ),
             ),
           ).animate().fadeIn(duration: 300.ms),
-          
-          // --- 2. NEW: "MY NOTES" SECTION ---
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
               "${translations.myNotes} - ${DateFormat.yMMMd().format(_selectedDay!)}",
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Card(
@@ -277,30 +289,33 @@ class _SchedulePageState extends State<SchedulePage> {
                           decoration: InputDecoration(
                             hintText: translations.typeYourNoteHere,
                             border: const OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                  color: theme.colorScheme.secondary, width: 2),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         _isNoteSaving
-                          ? const Center(child: CircularProgressIndicator())
-                          : ElevatedButton(
-                              onPressed: _saveNote,
-                              child: Text(translations.saveNote),
-                            ),
+                            ? const Center(child: CircularProgressIndicator())
+                            : ElevatedButton(
+                                onPressed: _saveNote,
+                                child: Text(translations.saveNote),
+                              ),
                       ],
                     ),
             ),
           ).animate().fadeIn(delay: 200.ms),
-
-          // --- 3. APPOINTMENTS FOR THE DAY ---
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
             child: Text(
               "${translations.schedule} - ${DateFormat.yMMMd().format(_selectedDay!)}",
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           _buildAppointmentList(_getAppointmentsForDay(_selectedDay!)),
-          const SizedBox(height: 16), // Padding at the bottom
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -318,12 +333,13 @@ class _SchedulePageState extends State<SchedulePage> {
         ),
       ).animate().fadeIn(delay: 200.ms);
     }
-    
+
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       itemCount: appointments.length,
-      shrinkWrap: true, // Important inside a ListView
-      physics: const NeverScrollableScrollPhysics(), // Important inside a ListView
+      shrinkWrap: true,
+      physics:
+          const NeverScrollableScrollPhysics(),
       itemBuilder: (context, index) {
         final appointment = appointments[index];
         return AppointmentCard(
@@ -337,16 +353,15 @@ class _SchedulePageState extends State<SchedulePage> {
               ),
             );
             if (result == true) {
-              // Full refresh
               _appointmentsFuture = _fetchAppointmentsForMonth(_focusedDay);
             } else {
-              // Just refresh this day's list
               _refreshSelectedDayAppointments();
             }
           },
         )
-        // This makes each card animate in
-        .animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1, duration: 200.ms);
+            .animate()
+            .fadeIn(delay: (index * 50).ms)
+            .slideX(begin: 0.1, duration: 200.ms);
       },
     );
   }

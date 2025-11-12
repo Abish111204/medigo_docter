@@ -1,7 +1,6 @@
 // lib/widgets/appointment_card.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
 
 class AppointmentCard extends StatelessWidget {
@@ -25,7 +24,7 @@ class AppointmentCard extends StatelessWidget {
     final age = (appointment['patient_age'] ?? '...').toString();
     final gender = (appointment['patient_gender'] ?? '...').toString();
     final status = (appointment['status'] ?? 'Upcoming').toString();
-    
+
     String formattedTime = '...';
     try {
       final timeParts = appointment['appointment_time'].toString().split(':');
@@ -36,78 +35,99 @@ class AppointmentCard extends StatelessWidget {
       formattedTime = time.format(context);
     } catch (e) { /* ignore parse errors */ }
 
+    // --- NEW: Determine accent color based on status ---
+    Color accentColor;
+    switch (status) {
+      case 'Cancelled':
+      case 'Missed':
+        accentColor = theme.colorScheme.error;
+        break;
+      case 'Completed':
+        accentColor = Colors.grey;
+        break;
+      case 'Confirmed':
+      case 'Upcoming':
+      default:
+        accentColor = theme.colorScheme.secondary; // Use Teal
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        // --- NEW: Added IntrinsicHeight and Row for the accent bar ---
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      '$formattedTime - $patientName',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.primaryColor,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              // --- NEW: Accent Bar ---
+              Container(
+                width: 6,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    bottomLeft: Radius.circular(12),
                   ),
-                  if (token != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '#$token',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.primaryColor,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${translations.age}: $age   •   ${translations.gender}: $gender',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                 ),
               ),
-              const Divider(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  StatusBadge(status: status),
-                  Row(
+              // --- Original Content, but now Expanded ---
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // --- MODIFIED: Flexible for long names ---
+                          Flexible(
+                            child: Text(
+                              patientName, // Name first
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // --- MODIFIED: Time and Token ---
+                          Text(
+                            token != null ? '$formattedTime (#$token)' : formattedTime,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        'View Details', // You can translate this
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
+                        '${translations.age}: $age   •   ${translations.gender}: $gender',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color:
+                              theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 14,
-                        color: theme.colorScheme.primary,
+                      const Divider(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          StatusBadge(status: status),
+                          // --- MODIFIED: Changed "View Details" to an icon ---
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: theme.colorScheme.secondary,
+                            size: 28,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -117,8 +137,7 @@ class AppointmentCard extends StatelessWidget {
   }
 }
 
-
-// --- NEW WIDGET: Status Badge ---
+// --- NEW WIDGET: Status Badge (Unchanged from before, but still needed) ---
 class StatusBadge extends StatelessWidget {
   final String status;
   const StatusBadge({super.key, required this.status});
@@ -126,45 +145,46 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     Color color;
     String text;
     IconData icon;
 
     switch (status) {
       case 'Cancelled':
-        color = Colors.red;
+        color = theme.colorScheme.error;
         text = translations.statusCancelled;
-        icon = Icons.cancel;
+        icon = Icons.cancel_outlined;
         break;
       case 'Completed':
-        color = Colors.grey;
+        color = Colors.grey.shade600;
         text = translations.statusCompleted;
-        icon = Icons.check_circle;
+        icon = Icons.check_circle_outline;
         break;
       case 'Missed':
-        color = Colors.orange;
-        text = translations.statusMissed; 
+        color = Colors.orange.shade700;
+        text = translations.statusMissed;
         icon = Icons.error_outline;
         break;
       case 'Confirmed':
       case 'Upcoming':
       default:
-        color = Colors.green;
+        color = theme.colorScheme.secondary; // Use Teal
         text = 'Upcoming'; // Default
-        icon = Icons.check_circle_outline;
+        icon = Icons.hourglass_top_outlined;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20), // More rounded
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 14),
-          const SizedBox(width: 4),
+          const SizedBox(width: 6),
           Text(
             text,
             style: TextStyle(

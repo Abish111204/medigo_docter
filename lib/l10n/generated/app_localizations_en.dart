@@ -469,6 +469,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadNewReport => 'Upload New Report';
 
   @override
+  String get firstName => 'First Name';
+
+  @override
+  String get lastName => 'Last Name';
+
+  @override
   String get availability => 'Availability';
 
   @override

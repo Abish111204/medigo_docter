@@ -393,6 +393,8 @@
 "endTime": "समाप्ति समय",
 "saveAvailability": "उपलब्धता सहेजें",
 "availabilityUpdated": "उपलब्धता अपडेट की गई!",
+"firstName": "पहला नाम",
+    "lastName": "अंतिम नाम",
 "errorAvailability": "उपलब्धता सहेजने में त्रुटि",
 "selectLanguage": "भाषा चुनें"
 

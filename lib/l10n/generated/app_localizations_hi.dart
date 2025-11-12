@@ -470,6 +470,12 @@ class AppLocalizationsHi extends AppLocalizations {
   String get uploadNewReport => 'नई रिपोर्ट अपलोड करें';
 
   @override
+  String get firstName => 'पहला नाम';
+
+  @override
+  String get lastName => 'अंतिम नाम';
+
+  @override
   String get availability => 'उपलब्धता';
 
   @override
