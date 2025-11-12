@@ -1,7 +1,6 @@
 // lib/pages/manage_leave_page.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
 import 'package:medigo_doctor/supabase_service.dart';
 
 class ManageLeavePage extends StatefulWidget {

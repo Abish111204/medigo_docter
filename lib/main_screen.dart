@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
 import 'package:medigo_doctor/main.dart'; // For supabase
 import 'package:medigo_doctor/pages/dashboard_page.dart';
+import 'package:medigo_doctor/pages/profile_page.dart';
 import 'package:medigo_doctor/pages/schedule_page.dart';
 import 'package:medigo_doctor/pages/settings_page.dart';
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
-import 'login_page.dart'; 
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -36,13 +36,13 @@ class _MainScreenState extends State<MainScreen> {
     try {
       final data = await supabase
           .from('doctors')
-          .select('id, name') 
+          .select('id, name')
           .eq('user_id', user.id)
           .single();
-      
+
       if (mounted) {
         setState(() {
-          _doctorBigId = data['id']; 
+          _doctorBigId = data['id'];
         });
       }
       return data;
@@ -61,7 +61,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
-    
+
     final List<String> pageTitles = [
       translations.dashboard,
       translations.schedule,
@@ -115,45 +115,43 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  AppBar _buildAppBar(BuildContext context, String title, AppLocalizations translations) {
+  AppBar _buildAppBar(
+      BuildContext context, String title, AppLocalizations translations) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     return AppBar(
+      leading: _selectedIndex == 0
+          ? IconButton(
+              // --- *** THIS IS THE FIX *** ---
+              icon: const Icon(Icons.account_circle_outlined),
+              tooltip: translations.profile,
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                );
+              },
+            )
+          : null,
       title: _selectedIndex == 0
           ? FutureBuilder<Map<String, dynamic>?>(
               future: _doctorProfileFuture,
               builder: (context, snapshot) {
-                String name = snapshot.hasData ? (snapshot.data!['name'] ?? 'Doctor') : '...';
-                return Row(
+                String name =
+                    snapshot.hasData ? (snapshot.data!['name'] ?? 'Doctor') : '...';
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                      child: Icon(
-                        Icons.person_outline,
-                        size: 20,
-                        color: Theme.of(context).primaryColor,
+                    Text(
+                      translations.welcome,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translations.welcome, // <-- FIXED KEY
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      name,
                     ),
                   ],
                 );
@@ -161,10 +159,6 @@ class _MainScreenState extends State<MainScreen> {
             )
           : Text(
               title,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
             ),
       actions: [
         IconButton(
@@ -178,18 +172,16 @@ class _MainScreenState extends State<MainScreen> {
           },
         ),
       ],
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: _selectedIndex != 0,
     );
   }
 
-  // Copied this from your original main.dart
   Future<void> _updateTheme(bool isDark) async {
     final themeString = !isDark ? 'Dark' : 'Light'; // Toggled value
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
     try {
-      // Assumes theme is stored on 'profiles' table
-      await supabase.from('profiles').update({ 
+      await supabase.from('profiles').update({
         'theme': themeString,
       }).eq('id', userId);
     } catch (e) {
