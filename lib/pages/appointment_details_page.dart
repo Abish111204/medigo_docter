@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // To get 'supabase'
+import 'package:medigo_doctor/main.dart'; // For supabase
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,12 +14,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 class AppointmentDetailsPage extends StatefulWidget {
   final Map<String, dynamic> appointment;
-  final VoidCallback? onStatusChanged;
 
   const AppointmentDetailsPage({
     super.key,
     required this.appointment,
-    this.onStatusChanged,
   });
 
   @override
@@ -38,7 +36,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   @override
   void initState() {
     super.initState();
-
+    
     final profileData = widget.appointment['profiles'];
     if (profileData is Map<String, dynamic>) {
       if (profileData['id'] != null) {
@@ -48,18 +46,15 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         _patientPhoneNumber = profileData['phone_number'].toString();
       }
     }
-
+    
     _doctorId = supabase.auth.currentUser?.id;
-    _currentStatus = widget.appointment['status'] ?? 'Confirmed';
-
-    // This function will now fetch from BOTH tables
+    _currentStatus = widget.appointment['status'] ?? 'Upcoming';
+    
     _reportsFuture = _fetchMedicalReports();
-
     _fetchDoctorName();
   }
 
   Future<void> _fetchDoctorName() async {
-    // ... (This function is correct, no change needed)
     if (_doctorId == null) return;
     try {
       final data = await supabase
@@ -67,7 +62,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           .select('name')
           .eq('user_id', _doctorId!)
           .single();
-      if (data['name'] != null) {
+      if (mounted && data['name'] != null) {
         setState(() {
           _doctorName = data['name'];
         });
@@ -78,7 +73,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Future<void> _makePhoneCall(String phoneNumber) async {
-    // ... (This function is correct, no change needed)
     final Uri launchUri = Uri(
       scheme: 'tel',
       path: phoneNumber,
@@ -87,24 +81,19 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       if (await canLaunchUrl(launchUri)) {
         await launchUrl(launchUri);
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text('Could not launch dialer.'),
-                backgroundColor: Colors.red),
-          );
-        }
+        throw 'Could not launch $launchUri';
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Error calling: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  // --- THIS IS THE MODIFIED FUNCTION ---
+  // THIS FUNCTION IS THE KEY
+  // It fetches reports from BOTH the patient and the doctor
   Future<List<Map<String, dynamic>>> _fetchMedicalReports() async {
     if (_patientId == null) {
       return [];
@@ -125,7 +114,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           .eq('user_id', _patientId!)
           .order('created_at', ascending: false);
 
-      // Run both queries at the same time
       final List<dynamic> results = await Future.wait([
         doctorUploadsFuture,
         patientUploadsFuture,
@@ -140,24 +128,22 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
       // 3. Combine them into one list
       final List<Map<String, dynamic>> allReports = [];
 
-      // Add doctor reports with a tag
       for (var report in doctorReports) {
         allReports.add({
           'title': report['report_title'] ?? 'Untitled',
           'date': report['uploaded_at'],
           'path': report['file_url'],
-          'bucket': 'medical_reports', // So we know where to download from
+          'bucket': 'medical_reports', // Doctor's bucket
           'uploaded_by': 'Doctor',
         });
       }
 
-      // Add patient reports with a tag
       for (var report in patientReports) {
         allReports.add({
           'title': report['description'] ?? report['file_name'] ?? 'Untitled',
           'date': report['created_at'],
           'path': report['file_path'],
-          'bucket': 'medical_records', // The patient's bucket
+          'bucket': 'medical_records', // Patient's bucket
           'uploaded_by': 'Patient',
         });
       }
@@ -175,25 +161,26 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     }
   }
 
+
   Future<void> _updateAppointmentStatus(String newStatus) async {
-    // ... (This function is correct, no change needed)
     try {
       await supabase
           .from('appointments')
           .update({'status': newStatus})
           .eq('id', widget.appointment['id']);
 
-      setState(() {
-        _currentStatus = newStatus;
-      });
-
-      widget.onStatusChanged?.call();
-
       if (mounted) {
+        setState(() {
+          _currentStatus = newStatus;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Appointment marked as $newStatus'),
           backgroundColor: Colors.green,
         ));
+        
+        // Send a 'true' value back to the previous screen to signal a refresh
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -206,7 +193,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Future<void> _uploadReport() async {
-    // ... (This function is correct, no change needed)
     if (_patientId == null || _doctorId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Error: Patient or Doctor ID is missing.')));
@@ -235,10 +221,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
       final extension = result.files.first.extension?.toLowerCase() ?? 'bin';
       const mimeTypes = {
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'png': 'image/png',
-        'pdf': 'application/pdf',
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'pdf': 'application/pdf',
       };
       final contentType = mimeTypes[extension] ?? 'application/octet-stream';
 
@@ -258,7 +242,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         'appointment_id': widget.appointment['id'],
         'report_title': fileName,
         'file_url': filePath, 
-        'doctor_id': _doctorId,
+        'doctor_id': widget.appointment['doctor_id'], // Use the bigint ID
       });
 
       // 3. CALL EDGE FUNCTION TO COPY TO PATIENT'S BUCKET
@@ -274,10 +258,10 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
         );
       } catch (e) {
         print('Could not copy file to patient records: $e');
-        if (mounted) {
+        // Show a non-blocking error
+         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                'Warning: File saved to doctor, but failed to copy to patient. $e'),
+            content: Text('Warning: Failed to copy to patient records. $e'),
             backgroundColor: Colors.orange,
           ));
         }
@@ -305,10 +289,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     }
   }
 
-  // --- THIS IS THE MODIFIED FUNCTION ---
   Future<void> _openReport(String bucket, String filePath, String title) async {
     try {
-      // Use the 'bucket' variable to download from the correct place
       final bytes = await supabase.storage.from(bucket).download(filePath);
 
       final dir = await getApplicationDocumentsDirectory();
@@ -341,6 +323,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(patientName),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Pop with 'false' to indicate no major change
+            Navigator.of(context).pop(false);
+          },
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
@@ -353,20 +342,20 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Patient Details',
+                    translations.patientDetails,
                     style: theme.textTheme.titleLarge
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
                   _buildDetailRow(
-                      context, Icons.person_outline, 'Name', patientName),
-                  _buildDetailRow(context, Icons.cake_outlined, 'Age', age),
-                  _buildDetailRow(context, Icons.wc_outlined, 'Gender', gender),
+                      context, Icons.person_outline, translations.name, patientName),
+                  _buildDetailRow(context, Icons.cake_outlined, translations.age, age),
+                  _buildDetailRow(context, Icons.wc_outlined, translations.gender, gender),
                   if (_patientPhoneNumber != null)
                     _buildPhoneRow(context, _patientPhoneNumber!)
                   else
                     _buildDetailRow(
-                        context, Icons.phone_disabled, 'Phone', 'Not provided'),
+                        context, Icons.phone_disabled, translations.phone, 'Not provided'),
                 ],
               ),
             ),
@@ -375,9 +364,8 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           const SizedBox(height: 24),
 
           // Appointment Status Section
-          // ... (This section is correct, no change needed)
           Text(
-            'Appointment Status',
+            translations.appointmentStatus,
             style: theme.textTheme.titleLarge
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),
@@ -388,7 +376,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  // "Mark as Completed" Button
                   ElevatedButton.icon(
                     icon: const Icon(Icons.check_circle),
                     label: Text(translations.statusCompleted),
@@ -399,26 +386,21 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: _currentStatus == 'Completed'
-                        ? null // Disable if already completed
+                        ? null 
                         : () => _updateAppointmentStatus('Completed'),
                   ),
-                  // "Mark as Pending" Button
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.pending_actions),
-                    label: const Text('Pending'), // You can translate this
+                    icon: const Icon(Icons.cancel),
+                    label: Text(translations.statusMissed),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          (_currentStatus == 'Completed' ||
-                                  _currentStatus == 'Missed')
-                              ? theme.primaryColor
-                              : Colors.grey,
+                      backgroundColor: _currentStatus == 'Missed'
+                          ? Colors.grey
+                          : Colors.red,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: (_currentStatus == 'Completed' ||
-                            _currentStatus == 'Missed')
-                        ? () => _updateAppointmentStatus(
-                            'Confirmed') // Set back to 'Confirmed'
-                        : null, // Disable if already pending
+                    onPressed: _currentStatus == 'Missed'
+                        ? null
+                        : () => _updateAppointmentStatus('Missed'),
                   ),
                 ],
               ),
@@ -432,7 +414,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Medical Reports',
+                translations.medicalReports,
                 style: theme.textTheme.titleLarge
                     ?.copyWith(fontWeight: FontWeight.bold),
               ),
@@ -444,14 +426,13 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                   : IconButton(
                       icon: Icon(Icons.upload_file_outlined,
                           color: theme.primaryColor),
-                      tooltip: 'Upload New Report',
+                      tooltip: translations.uploadNewReport,
                       onPressed: _uploadReport,
                     ),
             ],
           ),
           const SizedBox(height: 8),
 
-          // --- THIS IS THE MODIFIED WIDGET ---
           // Reports List
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _reportsFuture,
@@ -477,7 +458,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: reports.length,
                 itemBuilder: (context, index) {
-                  // Get data from our new combined map
                   final report = reports[index];
                   final title = report['title'];
                   final date =
@@ -501,7 +481,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
                       trailing: const Icon(Icons.download_for_offline_outlined),
                       onTap: () => _openReport(bucket, path, title),
                     ),
-                  ).animate().fadeIn(delay: (index * 50).ms);
+                  ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1);
                 },
               );
             },
@@ -513,7 +493,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
 
   Widget _buildDetailRow(
       BuildContext context, IconData icon, String label, String value) {
-    // ... (This function is correct, no change needed)
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -541,7 +520,6 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
   }
 
   Widget _buildPhoneRow(BuildContext context, String phoneNumber) {
-    // ... (This function is correct, no change needed)
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -550,7 +528,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
           Icon(Icons.phone_outlined, size: 20, color: theme.primaryColor),
           const SizedBox(width: 16),
           Text(
-            'Phone: ',
+            '${AppLocalizations.of(context)!.phone}: ',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.textTheme.bodySmall?.color?.withOpacity(0.7),
             ),
@@ -563,6 +541,7 @@ class _AppointmentDetailsPageState extends State<AppointmentDetailsPage> {
               textAlign: TextAlign.end,
             ),
           ),
+          // --- CALL BUTTON ---
           IconButton(
             icon: Icon(Icons.call, color: Colors.green.shade700),
             onPressed: () => _makePhoneCall(phoneNumber),

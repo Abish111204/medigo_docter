@@ -1,122 +1,31 @@
-// --- lib/pages/settings_page.dart ---
+// lib/pages/settings_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'manage_leave_page.dart';
+
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // To get 'supabase'
+import 'package:medigo_doctor/main.dart'; // For supabase
 import 'package:medigo_doctor/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:medigo_doctor/login_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+import 'availability_page.dart';
+import 'language_page.dart';
+// Import only ManageLeavePage to avoid symbol conflicts if the other file also declares AvailabilityPage
+import 'manage_leave_page.dart' show ManageLeavePage;
+
+
+class SettingsPage extends StatefulWidget {
+  final int? doctorBigId;
+  const SettingsPage({super.key, this.doctorBigId});
 
   @override
-  Widget build(BuildContext context) {
-    final translations = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+  State<SettingsPage> createState() => _SettingsPageState();
+}
 
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        // --- Profile Card ---
-        Card(
-            elevation: 2,
-            color: Theme.of(context).primaryColor,
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundColor: Colors.white.withOpacity(0.9),
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 28,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Doctor Profile', // You can translate this
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold
-                          ),
-                        ),
-                        Text(
-                          supabase.auth.currentUser?.email ?? '',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withOpacity(0.8)
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-        ),
-
-        // --- Preferences ---
-        _buildSectionHeader(context, translations.preferences),
-        Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.brightness_6_outlined),
-                  title: Text(translations.darkTheme),
-                  trailing: Switch(
-                    value: isDarkMode,
-                    onChanged: (isDark) {
-                      final newMode = isDark ? ThemeMode.dark : ThemeMode.light;
-                      themeProvider.setThemeMode(newMode);
-                      _updateTheme(isDark);
-                    },
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.edit_calendar_outlined),
-                  title: Text(translations.editSchedule),
-                  subtitle: const Text('Coming Soon'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    // TODO: Build the "Edit Schedule" page
-                  },
-                ),
-              ],
-            )
-        ),
-
-        // --- Account ---
-        _buildSectionHeader(context, "Account"),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.logout_outlined),
-            title: Text(translations.logout),
-            onTap: () async {
-              await supabase.auth.signOut();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (context) => const LoginPage()),
-                );
-              }
-            },
-          ),
-        ),
-
-      ].animate(interval: 50.ms)
-          .fadeIn(duration: 400.ms)
-          .slideY(begin: 0.2, end: 0, curve: Curves.easeOut),
-    );
-  }
-
-  // Helper to save the theme
+class _SettingsPageState extends State<SettingsPage> {
   Future<void> _updateTheme(bool isDark) async {
     final themeString = isDark ? 'Dark' : 'Light';
     final userId = supabase.auth.currentUser?.id;
@@ -126,20 +35,164 @@ class SettingsPage extends StatelessWidget {
         'theme': themeString,
       }).eq('id', userId);
     } catch (e) {
-      print('Error saving theme: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving theme: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24.0, bottom: 8.0, left: 12.0),
-      child: Text(
-        title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: Colors.grey[600],
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+  @override
+  Widget build(BuildContext context) {
+    final translations = AppLocalizations.of(context)!;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final theme = Theme.of(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    
+    final user = supabase.auth.currentUser;
+
+    return Scaffold(
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // --- Profile Header ---
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: theme.primaryColor.withOpacity(0.1),
+                child: Icon(
+                  Icons.person_outline,
+                  size: 32,
+                  color: theme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.email ?? 'Doctor',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "MediGo Doctor",
+                      style: theme.textTheme.titleSmall?.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 300.ms),
+
+          const SizedBox(height: 24),
+
+          // --- Schedule Section ---
+          Text(
+            translations.schedule.toUpperCase(),
+            style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+          ),
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.event_available_outlined),
+                  title: Text(translations.manageAvailability),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    if (widget.doctorBigId == null) return; // Not loaded yet
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => AvailabilityPage(
+                          doctorBigId: widget.doctorBigId!,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                         leading: const Icon(Icons.event_busy_outlined),
+                         title: Text(translations.manageLeave),
+                         trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                             if (widget.doctorBigId == null) return;
+                            Navigator.of(context).push(
+                         MaterialPageRoute(
+                         builder: (context) => ManageLeavePage(
+                          doctorBigId: widget.doctorBigId!,
         ),
+      ),
+    );
+  },
+),
+              ],
+            ),
+          ).animate().fadeIn(delay: 100.ms),
+
+          const SizedBox(height: 24),
+
+          // --- App Settings Section ---
+          Text(
+            translations.appSettings.toUpperCase(),
+            style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey[600], fontWeight: FontWeight.bold),
+          ),
+          Card(
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    isDarkMode ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
+                  ),
+                  title: Text(translations.darkMode),
+                  trailing: Switch(
+                    value: isDarkMode,
+                    onChanged: (value) {
+                      themeProvider.setThemeMode(
+                          value ? ThemeMode.dark : ThemeMode.light);
+                      _updateTheme(value);
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.language_outlined),
+                  title: Text(translations.language),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const LanguagePage()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 24),
+
+          // --- Sign Out Button ---
+          ElevatedButton.icon(
+            icon: const Icon(Icons.logout),
+            label: Text(translations.signOut),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            onPressed: () async {
+              await supabase.auth.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginPage()), 
+                  (route) => false,
+                );
+              }
+            },
+          ).animate().fadeIn(delay: 300.ms),
+        ],
       ),
     );
   }

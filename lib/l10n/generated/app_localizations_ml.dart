@@ -140,10 +140,10 @@ class AppLocalizationsMl extends AppLocalizations {
   String get yourBookings => 'നിങ്ങളുടെ ബുക്കിംഗുകൾ';
 
   @override
-  String get noAppointments => 'നിങ്ങൾക്ക് അപ്പോയിന്റ്മെന്റുകളൊന്നുമില്ല.';
+  String get noAppointments => 'ഈ ദിവസം അപ്പോയിന്റ്മെന്റുകളൊന്നുമില്ല.';
 
   @override
-  String get patientDetails => 'രോഗിയുടെ വിശദാംശങ്ങൾ';
+  String get patientDetails => 'രോഗിയുടെ വിവരങ്ങൾ';
 
   @override
   String get profile => 'പ്രൊഫൈൽ';
@@ -179,7 +179,7 @@ class AppLocalizationsMl extends AppLocalizations {
   String get other => 'മറ്റുള്ളവ';
 
   @override
-  String get selectDate => 'തീയതി തിരഞ്ഞെടുക്കുക';
+  String get selectDate => 'ഒരു തീയതി തിരഞ്ഞെടുക്കുക';
 
   @override
   String get selectTime => 'സമയം തിരഞ്ഞെടുക്കുക';
@@ -396,7 +396,7 @@ class AppLocalizationsMl extends AppLocalizations {
       'പാസ്‌വേഡിന് കുറഞ്ഞത് 8 അക്ഷരങ്ങൾ ഉണ്ടായിരിക്കണം.';
 
   @override
-  String get dashboard => 'ഡാഷ്ബോർഡ്';
+  String get dashboard => 'ഡാഷ്ബോർഡ്';
 
   @override
   String get schedule => 'ഷെഡ്യൂൾ';
@@ -406,7 +406,7 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get noAppointmentsToday =>
-      'നിങ്ങൾക്ക് ഇന്ന് അപ്പോയിന്റ്മെന്റുകളൊന്നുമില്ല.';
+      'ഇന്ന് നിങ്ങൾക്ക് അപ്പോയിന്റ്മെന്റുകളൊന്നുമില്ല.';
 
   @override
   String get allAppointments => 'എല്ലാ അപ്പോയിന്റ്മെന്റുകളും';
@@ -432,4 +432,108 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get editSchedule => 'ഷെഡ്യൂൾ എഡിറ്റ് ചെയ്യുക';
+
+  @override
+  String get todayAppointments => 'ഇന്നത്തെ അപ്പോയിന്റ്മെന്റുകൾ';
+
+  @override
+  String get welcome => 'വീണ്ടും സ്വാഗതം,';
+
+  @override
+  String get doctorLogin => 'ഡോക്ടർ പോർട്ടൽ ലോഗിൻ';
+
+  @override
+  String get manageAvailability => 'ലഭ്യത ക്രമീകരിക്കുക';
+
+  @override
+  String get appSettings => 'ആപ്പ് ക്രമീകരണങ്ങൾ';
+
+  @override
+  String get darkMode => 'ഡാർക്ക് മോഡ്';
+
+  @override
+  String get signOut => 'സൈൻ ഔട്ട് ചെയ്യുക';
+
+  @override
+  String get name => 'പേര്';
+
+  @override
+  String get age => 'പ്രായം';
+
+  @override
+  String get phone => 'ഫോൺ';
+
+  @override
+  String get appointmentStatus => 'അപ്പോയിന്റ്മെന്റ് നില';
+
+  @override
+  String get statusMissed => 'നഷ്ടമായി';
+
+  @override
+  String get medicalReports => 'മെഡിക്കൽ റിപ്പോർട്ടുകൾ';
+
+  @override
+  String get uploadNewReport => 'പുതിയ റിപ്പോർട്ട് അപ്‌ലോഡ് ചെയ്യുക';
+
+  @override
+  String get availability => 'ലഭ്യത';
+
+  @override
+  String get setYourHours => 'നിങ്ങളുടെ സ്ഥിരം കൺസൾട്ടിംഗ് സമയം സജ്ജമാക്കുക.';
+
+  @override
+  String get startTime => 'തുടങ്ങുന്ന സമയം';
+
+  @override
+  String get endTime => 'അവസാനിക്കുന്ന സമയം';
+
+  @override
+  String get save => 'സേവ് ചെയ്യുക';
+
+  @override
+  String get availabilityUpdated => 'ലഭ്യത അപ്ഡേറ്റ് ചെയ്തു!';
+
+  @override
+  String get errorUpdatingAvailability => 'ലഭ്യത അപ്ഡേറ്റ് ചെയ്യുന്നതിൽ പിശക്.';
+
+  @override
+  String get manageLeave => 'അവധി ക്രമീകരിക്കുക';
+
+  @override
+  String get selectLeaveDates => ' ലഭ്യമല്ലാത്ത തീയതികൾ തിരഞ്ഞെടുക്കുക.';
+
+  @override
+  String get leaveDates => 'അവധി ദിവസങ്ങൾ';
+
+  @override
+  String get saveLeave => 'അവധി ദിവസങ്ങൾ സംരക്ഷിക്കുക';
+
+  @override
+  String get leaveUpdated => 'അവധി തീയതികൾ അപ്ഡേറ്റ് ചെയ്തു.';
+
+  @override
+  String get errorLeave => 'അവധി അപ്ഡേറ്റ് ചെയ്യുന്നതിൽ പിശക്';
+
+  @override
+  String get tapToRemove => 'നീക്കം ചെയ്യാൻ തീയതിയിൽ ടാപ്പ് ചെയ്യുക';
+
+  @override
+  String get noLeaveDates => 'നിങ്ങൾക്ക് അവധി ദിവസങ്ങൾ ഷെഡ്യൂൾ ചെയ്തിട്ടില്ല.';
+
+  @override
+  String get manageLeaveDesc =>
+      'അവധിയായി അടയാളപ്പെടുത്താൻ ദിവസങ്ങളോ തീയതികളോ തിരഞ്ഞെടുക്കുക.';
+
+  @override
+  String get scheduledLeave => 'ഷെഡ്യൂൾ ചെയ്ത അവധി ദിവസങ്ങൾ';
+
+  @override
+  String get availabilityDesc =>
+      'നിങ്ങളുടെ പ്രതിവാര കൺസൾട്ടിംഗ് സമയങ്ങൾ സജ്ജമാക്കുക.';
+
+  @override
+  String get saveAvailability => 'ലഭ്യത സംരക്ഷിക്കുക';
+
+  @override
+  String get errorAvailability => 'ലഭ്യത സംരക്ഷിക്കുന്നതിൽ പിശക്';
 }

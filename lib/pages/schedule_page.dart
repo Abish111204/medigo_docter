@@ -1,349 +1,353 @@
+// lib/pages/schedule_page.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // To get 'supabase'
+import 'package:medigo_doctor/main.dart';
 import 'package:medigo_doctor/pages/appointment_details_page.dart';
 import 'package:medigo_doctor/widgets/appointment_card.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key});
+  final int? doctorBigId; // The 'id' from the doctors table
+  const SchedulePage({super.key, this.doctorBigId});
 
   @override
   State<SchedulePage> createState() => _SchedulePageState();
 }
 
 class _SchedulePageState extends State<SchedulePage> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
-  DateTime _selectedDay = DateTime.now();
+  DateTime? _selectedDay;
+  late Future<List<Map<String, dynamic>>> _appointmentsFuture;
+  Map<String, List<Map<String, dynamic>>> _appointmentsCache = {};
 
-  String? _doctorId;
-  final _noteController = TextEditingController();
-
-  bool _isAppointmentsLoading = true;
-  bool _isNoteLoading = true;
-
-  Map<DateTime, List<dynamic>> _events = {};
-  List<Map<String, dynamic>> _allAppointments = [];
-  List<Map<String, dynamic>> _selectedDayAppointments = [];
+  // --- NEW: For the Notes feature ---
+  final TextEditingController _noteController = TextEditingController();
+  bool _isNoteLoading = false;
+  bool _isNoteSaving = false;
+  Map<String, String> _notesCache = {};
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
+    _selectedDay = _focusedDay;
+    if (widget.doctorBigId != null) {
+      _appointmentsFuture = _fetchAppointmentsForMonth(_focusedDay);
+      _fetchNoteForDay(_selectedDay!);
+    } else {
+      _appointmentsFuture = Future.value([]);
+    }
   }
 
   @override
-  void dispose() {
-    _noteController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadInitialData() async {
-    setState(() {
-      _isAppointmentsLoading = true;
-    });
-
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) {
-      setState(() => _isAppointmentsLoading = false);
-      return;
-    }
-
-    try {
-      final doctorData = await supabase
-          .from('doctors')
-          .select('id')
-          .eq('user_id', userId)
-          .single();
-          
-      // --- THIS IS THE FIX ---
-      // Convert the doctor ID to a String to prevent the type error
-      _doctorId = doctorData['id'].toString();
-      // --- END OF FIX ---
-
-      if (_doctorId == null) {
-        if (mounted) setState(() => _isAppointmentsLoading = false);
-        return;
-      }
-
-      final appointmentsData = await supabase
-          .from('appointments')
-          .select('*, profiles(id, phone_number)')
-          .eq('doctor_id', _doctorId!)
-          .order('appointment_date', ascending: false);
-
-      _allAppointments = (appointmentsData as List).cast<Map<String, dynamic>>();
-
-      _events = {};
-      for (var appt in _allAppointments) {
-        try {
-          final date = DateTime.parse(appt['appointment_date'].toString());
-
-          final dayOnly = DateTime.utc(date.year, date.month, date.day);
-          if (_events[dayOnly] == null) {
-            _events[dayOnly] = [];
-          }
-          _events[dayOnly]!.add(appt);
-        } catch (e) {
-          print('Invalid date format: ${appt['appointment_date']}');
-        }
-      }
-
-      final today = DateTime.now();
-      final todayUTC = DateTime.utc(today.year, today.month, today.day);
-      _onDaySelected(todayUTC, todayUTC);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error loading data: ${e.toString()}'),
-              backgroundColor: Colors.red),
-        );
-      }
-    }
-    if (mounted) {
+  void didUpdateWidget(covariant SchedulePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.doctorBigId != null && oldWidget.doctorBigId == null) {
       setState(() {
-        _isAppointmentsLoading = false;
+        _appointmentsFuture = _fetchAppointmentsForMonth(_focusedDay);
+        _fetchNoteForDay(_selectedDay!);
       });
     }
   }
 
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    final normalizedDay =
-        DateTime.utc(selectedDay.year, selectedDay.month, selectedDay.day);
-    if (!isSameDay(_selectedDay, normalizedDay)) {
-      setState(() {
-        _selectedDay = normalizedDay;
-        _focusedDay = focusedDay;
-      });
-      _loadNoteForDay(normalizedDay);
-      _filterAppointmentsForDay(normalizedDay);
-    }
-  }
+  Future<List<Map<String, dynamic>>> _fetchAppointmentsForMonth(DateTime month) async {
+    if (widget.doctorBigId == null) return [];
 
-  void _filterAppointmentsForDay(DateTime day) {
-    setState(() {
-      _selectedDayAppointments =
-          (_events[day] ?? []).cast<Map<String, dynamic>>();
-    });
-  }
-
-  Future<void> _loadNoteForDay(DateTime day) async {
-    if (mounted) setState(() => _isNoteLoading = true);
-    _noteController.clear();
-    final userId = supabase.auth.currentUser!.id;
-    final dateString = DateFormat('yyyy-MM-dd').format(day);
+    final firstDay = DateTime(month.year, month.month, 1);
+    final lastDay = DateTime(month.year, month.month + 1, 0);
 
     try {
       final data = await supabase
-          .from('calendar_notes')
+          .from('appointments')
+          .select('*, profiles(*)')
+          .eq('doctor_id', widget.doctorBigId!)
+          .gte('appointment_date', firstDay.toIso8601String())
+          .lte('appointment_date', lastDay.toIso8601String());
+      
+      final appointments = (data as List).cast<Map<String, dynamic>>();
+      _appointmentsCache = _groupAppointmentsByDay(appointments);
+      setState(() {}); // Update the UI with event markers
+      return appointments;
+    } catch (e) {
+      print('Error fetching month appointments: $e');
+      return [];
+    }
+  }
+
+  Map<String, List<Map<String, dynamic>>> _groupAppointmentsByDay(List<Map<String, dynamic>> appointments) {
+    Map<String, List<Map<String, dynamic>>> map = {};
+    for (var app in appointments) {
+      final day = app['appointment_date'];
+      if (map[day] == null) {
+        map[day] = [];
+      }
+      map[day]!.add(app);
+    }
+    return map;
+  }
+
+  List<Map<String, dynamic>> _getAppointmentsForDay(DateTime day) {
+    final dayString = DateFormat('yyyy-MM-dd').format(day);
+    return _appointmentsCache[dayString] ?? [];
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    if (!isSameDay(_selectedDay, selectedDay)) {
+      setState(() {
+        _selectedDay = selectedDay;
+        _focusedDay = focusedDay;
+      });
+      // Fetch the note for the newly selected day
+      _fetchNoteForDay(selectedDay);
+    }
+  }
+
+  void _onPageChanged(DateTime focusedDay) {
+    _focusedDay = focusedDay;
+    // Fetch appointments for the new month
+    _appointmentsFuture = _fetchAppointmentsForMonth(focusedDay);
+  }
+
+  void _refreshSelectedDayAppointments() {
+    setState(() {
+      // This just rebuilds the list from cache
+    });
+  }
+
+  // --- NEW: Fetch the note for the selected day ---
+  Future<void> _fetchNoteForDay(DateTime day) async {
+    if (widget.doctorBigId == null) return;
+    setState(() { _isNoteLoading = true; });
+    
+    final dateString = DateFormat('yyyy-MM-dd').format(day);
+
+    // Check cache first
+    if (_notesCache.containsKey(dateString)) {
+      _noteController.text = _notesCache[dateString]!;
+      setState(() { _isNoteLoading = false; });
+      return;
+    }
+    
+    // If not in cache, fetch from Supabase
+    try {
+      final data = await supabase
+          .from('doctor_daily_notes')
           .select('note_text')
-          .eq('user_id', userId)
+          .eq('doctor_id', widget.doctorBigId!)
           .eq('note_date', dateString)
           .maybeSingle();
 
-      if (data != null && data['note_text'] != null) {
-        if (mounted) _noteController.text = data['note_text'].toString();
+      if (mounted) {
+        final note = (data?['note_text'] as String?) ?? '';
+        _noteController.text = note;
+        _notesCache[dateString] = note; // Save to cache
       }
     } catch (e) {
-      /* ignore */
+      print('Error fetching note: $e');
+      _noteController.text = ''; // Clear on error
+    } finally {
+      if (mounted) {
+        setState(() { _isNoteLoading = false; });
+      }
     }
-    if (mounted) setState(() => _isNoteLoading = false);
   }
 
-  Future<void> _saveNoteForDay() async {
-    setState(() => _isNoteLoading = true);
+  // --- NEW: Save the note for the selected day ---
+  Future<void> _saveNote() async {
+    if (widget.doctorBigId == null || _selectedDay == null) return;
+    setState(() { _isNoteSaving = true; });
+
     final translations = AppLocalizations.of(context)!;
-    final text = _noteController.text;
-    final userId = supabase.auth.currentUser!.id;
-    final dateString = DateFormat('yyyy-MM-dd').format(_selectedDay);
+    final dateString = DateFormat('yyyy-MM-dd').format(_selectedDay!);
+    final noteText = _noteController.text;
 
     try {
-      await supabase.from('calendar_notes').upsert({
-        'user_id': userId,
-        'note_date': dateString,
-        'note_text': text,
-      }, onConflict: 'user_id, note_date');
+      // 'upsert' will create a new note or update an existing one
+      await supabase
+          .from('doctor_daily_notes')
+          .upsert({
+            'doctor_id': widget.doctorBigId,
+            'note_date': dateString,
+            'note_text': noteText,
+          }, onConflict: 'doctor_id, note_date'); // Use the UNIQUE constraint
+
+      _notesCache[dateString] = noteText; // Update cache
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(translations.noteSaved),
-              backgroundColor: Colors.green),
+          SnackBar(content: Text(translations.noteSaved), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red),
+          SnackBar(content: Text('Error saving note: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() { _isNoteSaving = false; });
+        FocusScope.of(context).unfocus(); // Hide keyboard
+      }
     }
-    if (mounted) setState(() => _isNoteLoading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    
+    if (widget.doctorBigId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
+    return Scaffold(
+      body: ListView( // Use ListView to allow notes and appointments to scroll
+        padding: const EdgeInsets.all(0),
+        children: [
+          // --- 1. STYLED CALENDAR ---
+          Card(
+            margin: const EdgeInsets.all(16.0),
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: TableCalendar(
-              locale: Localizations.localeOf(context).languageCode,
               firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2040, 12, 31),
+              lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
               selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              calendarFormat: _calendarFormat,
-              eventLoader: (day) {
-                final normalizedDay =
-                    DateTime.utc(day.year, day.month, day.day);
-                return _events[normalizedDay] ?? [];
-              },
               onDaySelected: _onDaySelected,
-              onFormatChanged: (format) {
-                setState(() {
-                  _calendarFormat = format;
-                });
-              },
-              onPageChanged: (focusedDay) {
-                _focusedDay = focusedDay;
-              },
+              onPageChanged: _onPageChanged,
+              eventLoader: _getAppointmentsForDay,
+              // --- Professional Styling ---
               calendarStyle: CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
+                // Selected day
                 selectedDecoration: BoxDecoration(
                   color: theme.primaryColor,
                   shape: BoxShape.circle,
                 ),
-                selectedTextStyle: const TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.bold),
+                selectedTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                // Today
+                todayDecoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                todayTextStyle: TextStyle(color: theme.textTheme.bodyLarge?.color),
+                // Event markers
                 markerDecoration: BoxDecoration(
                   color: theme.colorScheme.error,
                   shape: BoxShape.circle,
                 ),
+                // Weekend/Outside day styling
+                weekendTextStyle: TextStyle(color: theme.colorScheme.error.withOpacity(0.7)),
+                outsideDaysVisible: false,
               ),
               headerStyle: HeaderStyle(
-                  formatButtonShowsNext: false,
-                  formatButtonDecoration: BoxDecoration(
-                    color: theme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  formatButtonTextStyle: TextStyle(
-                    color: theme.primaryColor,
-                  )),
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: theme.textTheme.titleMedium!.copyWith(fontWeight: FontWeight.bold),
+                leftChevronIcon: Icon(Icons.chevron_left, color: theme.primaryColor),
+                rightChevronIcon: Icon(Icons.chevron_right, color: theme.primaryColor),
+              ),
+            ),
+          ).animate().fadeIn(duration: 300.ms),
+          
+          // --- 2. NEW: "MY NOTES" SECTION ---
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              "${translations.myNotes} - ${DateFormat.yMMMd().format(_selectedDay!)}",
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-        ).animate().fadeIn().slideY(begin: 0.1, end: 0),
-        const SizedBox(height: 16),
-        _buildSectionHeader(
-            context,
-            "${translations.myNotes} for ${DateFormat.yMMMd().format(_selectedDay)}"),
-        Card(
-          margin: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _isNoteLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _noteController,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          hintText: translations.typeYourNoteHere,
-                          border: const OutlineInputBorder(),
+          Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16.0),
+            elevation: 1,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _isNoteLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextField(
+                          controller: _noteController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: translations.typeYourNoteHere,
+                            border: const OutlineInputBorder(),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        onPressed: _isNoteLoading ? null : _saveNoteForDay,
-                        child: Text(translations.saveNote),
-                      ),
-                    ],
-                  ).animate().fadeIn(delay: 100.ms),
+                        const SizedBox(height: 12),
+                        _isNoteSaving
+                          ? const Center(child: CircularProgressIndicator())
+                          : ElevatedButton(
+                              onPressed: _saveNote,
+                              child: Text(translations.saveNote),
+                            ),
+                      ],
+                    ),
+            ),
+          ).animate().fadeIn(delay: 200.ms),
+
+          // --- 3. APPOINTMENTS FOR THE DAY ---
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+            child: Text(
+              "${translations.schedule} - ${DateFormat.yMMMd().format(_selectedDay!)}",
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
-        _buildSectionHeader(
-            context,
-            "${translations.schedule} on ${DateFormat.yMMMd().format(_selectedDay)}"),
-        _buildAppointmentList(context, translations),
-      ],
+          _buildAppointmentList(_getAppointmentsForDay(_selectedDay!)),
+          const SizedBox(height: 16), // Padding at the bottom
+        ],
+      ),
     );
   }
 
-  Widget _buildAppointmentList(
-      BuildContext context, AppLocalizations translations) {
-    if (_isAppointmentsLoading) {
-      return const Center(
-          child: Padding(
-        padding: EdgeInsets.all(32.0),
-        child: CircularProgressIndicator(),
-      ));
-    }
-
-    if (_selectedDayAppointments.isEmpty) {
+  Widget _buildAppointmentList(List<Map<String, dynamic>> appointments) {
+    if (appointments.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 48.0, horizontal: 16.0),
+          padding: const EdgeInsets.all(32.0),
           child: Text(
-            translations.noAppointmentsToday,
+            AppLocalizations.of(context)!.noAppointments,
             style: Theme.of(context).textTheme.titleMedium,
-            textAlign: TextAlign.center,
           ),
         ),
-      ).animate().fadeIn();
+      ).animate().fadeIn(delay: 200.ms);
     }
-
+    
     return ListView.builder(
-      padding: EdgeInsets.zero,
-      physics: const NeverScrollableScrollPhysics(),
-      shrinkWrap: true,
-      itemCount: _selectedDayAppointments.length,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      itemCount: appointments.length,
+      shrinkWrap: true, // Important inside a ListView
+      physics: const NeverScrollableScrollPhysics(), // Important inside a ListView
       itemBuilder: (context, index) {
-        final appt = _selectedDayAppointments[index];
+        final appointment = appointments[index];
         return AppointmentCard(
-          appointment: appt,
+          appointment: appointment,
           onTap: () async {
-            await Navigator.push(
-              context,
+            final result = await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => AppointmentDetailsPage(
-                  appointment: appt,
-                  onStatusChanged: _loadInitialData,
+                  appointment: appointment,
                 ),
               ),
             );
+            if (result == true) {
+              // Full refresh
+              _appointmentsFuture = _fetchAppointmentsForMonth(_focusedDay);
+            } else {
+              // Just refresh this day's list
+              _refreshSelectedDayAppointments();
+            }
           },
-        ).animate().fadeIn(delay: (index * 50).ms, duration: 400.ms);
+        )
+        // This makes each card animate in
+        .animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1, duration: 200.ms);
       },
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0, top: 8.0),
-      child: Text(
-        title,
-        style: Theme.of(context)
-            .textTheme
-            .titleLarge
-            ?.copyWith(fontWeight: FontWeight.bold),
-      ),
     );
   }
 }

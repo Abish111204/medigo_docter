@@ -361,7 +361,7 @@ abstract class AppLocalizations {
   /// No description provided for @noAppointments.
   ///
   /// In en, this message translates to:
-  /// **'You have no upcoming appointments.'**
+  /// **'No appointments on this day.'**
   String get noAppointments;
 
   /// No description provided for @patientDetails.
@@ -439,7 +439,7 @@ abstract class AppLocalizations {
   /// No description provided for @selectDate.
   ///
   /// In en, this message translates to:
-  /// **'Select Date'**
+  /// **'Select a date'**
   String get selectDate;
 
   /// No description provided for @selectTime.
@@ -903,6 +903,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit Schedule'**
   String get editSchedule;
+
+  /// No description provided for @todayAppointments.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Appointments'**
+  String get todayAppointments;
+
+  /// No description provided for @welcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back,'**
+  String get welcome;
+
+  /// No description provided for @doctorLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Doctor Portal Login'**
+  String get doctorLogin;
+
+  /// No description provided for @manageAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Availability'**
+  String get manageAvailability;
+
+  /// No description provided for @appSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'App Settings'**
+  String get appSettings;
+
+  /// No description provided for @darkMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark Mode'**
+  String get darkMode;
+
+  /// No description provided for @signOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOut;
+
+  /// No description provided for @name.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get name;
+
+  /// No description provided for @age.
+  ///
+  /// In en, this message translates to:
+  /// **'Age'**
+  String get age;
+
+  /// No description provided for @phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get phone;
+
+  /// No description provided for @appointmentStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Appointment Status'**
+  String get appointmentStatus;
+
+  /// No description provided for @statusMissed.
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get statusMissed;
+
+  /// No description provided for @medicalReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical Reports'**
+  String get medicalReports;
+
+  /// No description provided for @uploadNewReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload New Report'**
+  String get uploadNewReport;
+
+  /// No description provided for @availability.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability'**
+  String get availability;
+
+  /// No description provided for @setYourHours.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your default consulting hours.'**
+  String get setYourHours;
+
+  /// No description provided for @startTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Time'**
+  String get startTime;
+
+  /// No description provided for @endTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End Time'**
+  String get endTime;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @availabilityUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Availability updated!'**
+  String get availabilityUpdated;
+
+  /// No description provided for @errorUpdatingAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating availability.'**
+  String get errorUpdatingAvailability;
+
+  /// No description provided for @manageLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Leave'**
+  String get manageLeave;
+
+  /// No description provided for @selectLeaveDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range to mark as unavailable.'**
+  String get selectLeaveDates;
+
+  /// No description provided for @leaveDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave Dates'**
+  String get leaveDates;
+
+  /// No description provided for @saveLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Leave Dates'**
+  String get saveLeave;
+
+  /// No description provided for @leaveUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave dates updated.'**
+  String get leaveUpdated;
+
+  /// No description provided for @errorLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Error updating leave'**
+  String get errorLeave;
+
+  /// No description provided for @tapToRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a date to remove it'**
+  String get tapToRemove;
+
+  /// No description provided for @noLeaveDates.
+  ///
+  /// In en, this message translates to:
+  /// **'You have no leave dates scheduled.'**
+  String get noLeaveDates;
+
+  /// No description provided for @manageLeaveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Select single days or a date range to mark as on leave.'**
+  String get manageLeaveDesc;
+
+  /// No description provided for @scheduledLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled Leave Days'**
+  String get scheduledLeave;
+
+  /// No description provided for @availabilityDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your weekly consulting start and end times.'**
+  String get availabilityDesc;
+
+  /// No description provided for @saveAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Availability'**
+  String get saveAvailability;
+
+  /// No description provided for @errorAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving availability'**
+  String get errorAvailability;
 }
 
 class _AppLocalizationsDelegate

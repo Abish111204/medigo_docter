@@ -140,7 +140,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get yourBookings => 'आपकी बुकिंग';
 
   @override
-  String get noAppointments => 'आपकी कोई आगामी अपॉइंटMENT नहीं है।';
+  String get noAppointments => 'इस दिन कोई अपॉइंटमेंट नहीं है।';
 
   @override
   String get patientDetails => 'रोगी का विवरण';
@@ -179,7 +179,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get other => 'अन्य';
 
   @override
-  String get selectDate => 'दिनांक चुनें';
+  String get selectDate => 'एक तारीख चुनें';
 
   @override
   String get selectTime => 'समय चुनें';
@@ -281,7 +281,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get statusCancelled => 'रद्द';
 
   @override
-  String get statusCompleted => 'पूरा हुआ';
+  String get statusCompleted => 'पूर्ण';
 
   @override
   String get bookingDetails => 'बुकिंग विवरण';
@@ -426,4 +426,109 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get editSchedule => 'शेड्यूल संपादित करें';
+
+  @override
+  String get todayAppointments => 'आज की नियुक्तियाँ';
+
+  @override
+  String get welcome => 'वापसी पर स्वागत है,';
+
+  @override
+  String get doctorLogin => 'डॉक्टर पोर्टल लॉगिन';
+
+  @override
+  String get manageAvailability => 'उपलब्धता प्रबंधित करें';
+
+  @override
+  String get appSettings => 'ऐप सेटिंग्स';
+
+  @override
+  String get darkMode => 'डार्क मोड';
+
+  @override
+  String get signOut => 'साइन आउट';
+
+  @override
+  String get name => 'नाम';
+
+  @override
+  String get age => 'आयु';
+
+  @override
+  String get phone => 'फ़ोन';
+
+  @override
+  String get appointmentStatus => 'अपॉइंटमेंट स्थिति';
+
+  @override
+  String get statusMissed => 'चूक गया';
+
+  @override
+  String get medicalReports => 'मेडिकल रिपोर्ट';
+
+  @override
+  String get uploadNewReport => 'नई रिपोर्ट अपलोड करें';
+
+  @override
+  String get availability => 'उपलब्धता';
+
+  @override
+  String get setYourHours => 'अपने डिफ़ॉल्ट परामर्श घंटे सेट करें।';
+
+  @override
+  String get startTime => 'प्रारंभ समय';
+
+  @override
+  String get endTime => 'समाप्ति समय';
+
+  @override
+  String get save => 'सहेजें';
+
+  @override
+  String get availabilityUpdated => 'उपलब्धता अपडेट की गई!';
+
+  @override
+  String get errorUpdatingAvailability => 'उपलब्धता अपडेट करने में त्रुटि।';
+
+  @override
+  String get manageLeave => 'छुट्टी प्रबंधित करें';
+
+  @override
+  String get selectLeaveDates =>
+      'अनुपलब्ध के रूप में चिह्नित करने के लिए दिनांक सीमा चुनें।';
+
+  @override
+  String get leaveDates => 'छुट्टी की तारीखें';
+
+  @override
+  String get saveLeave => 'छुट्टी की तारीखें सहेजें';
+
+  @override
+  String get leaveUpdated => 'छुट्टी की तारीखें अपडेट की गईं।';
+
+  @override
+  String get errorLeave => 'छुट्टी अपडेट करने में त्रुटि';
+
+  @override
+  String get tapToRemove => 'हटाने के लिए तारीख पर टैप करें';
+
+  @override
+  String get noLeaveDates => 'आपकी कोई छुट्टी निर्धारित नहीं है।';
+
+  @override
+  String get manageLeaveDesc =>
+      'छुट्टी के रूप में चिह्नित करने के लिए एकल दिन या दिनांक सीमा चुनें।';
+
+  @override
+  String get scheduledLeave => 'अनुसूचित छुट्टी के दिन';
+
+  @override
+  String get availabilityDesc =>
+      'अपना साप्ताहिक परामर्श प्रारंभ और समाप्ति समय निर्धारित करें।';
+
+  @override
+  String get saveAvailability => 'उपलब्धता सहेजें';
+
+  @override
+  String get errorAvailability => 'उपलब्धता सहेजने में त्रुटि';
 }

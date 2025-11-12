@@ -1,135 +1,146 @@
-// --- lib/pages/dashboard_page.dart ---
+// lib/pages/dashboard_page.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // To get 'supabase'
+import 'package:medigo_doctor/main.dart';
 import 'package:medigo_doctor/pages/appointment_details_page.dart';
 import 'package:medigo_doctor/widgets/appointment_card.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final int? doctorBigId; // The 'id' from the doctors table
+  const DashboardPage({super.key, this.doctorBigId});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  Future<List<Map<String, dynamic>>>? _todayApptsFuture;
+  late Future<List<Map<String, dynamic>>> _todayAppointmentsFuture;
+  final String _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
   @override
   void initState() {
     super.initState();
-    _loadDashboard();
+    if (widget.doctorBigId != null) {
+      _todayAppointmentsFuture = _fetchTodayAppointments(widget.doctorBigId!);
+    } else {
+      _todayAppointmentsFuture = Future.value([]); // Init with empty
+    }
   }
 
-  // --- MODIFIED: This function will be passed as a callback ---
-  Future<void> _loadDashboard() async {
-    // We wrap in setState to ensure the FutureBuilder rebuilds
-    setState(() {
-       _todayApptsFuture = _fetchTodayAppointments();
-    });
+  @override
+  void didUpdateWidget(covariant DashboardPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If the doctorBigId was null and is now available, fetch appointments
+    if (widget.doctorBigId != null && oldWidget.doctorBigId == null) {
+      setState(() {
+        _todayAppointmentsFuture = _fetchTodayAppointments(widget.doctorBigId!);
+      });
+    }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchTodayAppointments() async {
-    final userId = supabase.auth.currentUser?.id;
-    if (userId == null) throw 'Not logged in!';
+  Future<List<Map<String, dynamic>>> _fetchTodayAppointments(int doctorId) async {
+    try {
+      final data = await supabase
+          .from('appointments')
+          .select('*, profiles(*)') // Fetch patient info from profiles
+          .eq('doctor_id', doctorId)
+          .eq('appointment_date', _today)
+          .order('appointment_time', ascending: true);
 
-    // --- THIS IS THE FIX (Part 1) ---
-    // 1. Get the doctor's *profile id* (from the doctors table)
-    // We assume the patient app uses the DOCTOR'S PROFILE ID (UUID) to book
-    final doctorData = await supabase
-        .from('doctors')
-        .select('id')
-        .eq('user_id', userId) // Find doctor profile using auth user id
-        .single();
+      return (data as List).cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error fetching today\'s appointments: $e');
+      return [];
+    }
+  }
 
-    final doctorId = doctorData['id']; // This is the ID patients use to book
-    // --- END OF FIX 1 ---
-
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    // --- THIS IS THE FIX 2 ---
-    final appointmentsData = await supabase
-        .from('appointments')
-        .select('*, profiles(id, phone_number)') // Also get patient ID
-        .eq('doctor_id', doctorId) // <-- Use doctorId (from doctors table)
-        // --- ADDED 'Pending' to the filter ---
-        .inFilter('status', ['Confirmed', 'Upcoming', 'Completed', 'Pending', 'Missed']) 
-        .eq('appointment_date', today)
-        .order('appointment_time', ascending: true);
-    // --- END OF FIX 2 ---
-
-    return (appointmentsData as List).cast<Map<String, dynamic>>();
+  void _refreshAppointments() {
+     if (widget.doctorBigId != null) {
+      setState(() {
+        _todayAppointmentsFuture = _fetchTodayAppointments(widget.doctorBigId!);
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        // 1. Today's Appointments
-        _buildSectionHeader(context, translations.todaysAppointments),
-        FutureBuilder<List<Map<String, dynamic>>>(
-          future: _todayApptsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-            }
-            final appointments = snapshot.data!;
-            if (appointments.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    translations.noAppointmentsToday,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ).animate().fadeIn();
-            }
+    
+    if (widget.doctorBigId == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-            return ListView.builder(
-              itemCount: appointments.length,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                final appt = appointments[index];
-                
-                return AppointmentCard(
-                  appointment: appt,
-                  onTap: () async {
-                    // --- MODIFIED: Pass the _loadDashboard callback ---
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AppointmentDetailsPage(
-                          appointment: appt,
-                          onStatusChanged: _loadDashboard, // Pass refresh func
-                        ),
+    return Scaffold(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _refreshAppointments();
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                translations.todayAppointments, // <-- FIXED KEY
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: _todayAppointmentsFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  final appointments = snapshot.data!;
+                  if (appointments.isEmpty) {
+                    return Center(
+                      child: Text(
+                        translations.noAppointmentsToday,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                    );
-                  },
-                ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1, end: 0);
-              },
-            );
-          },
+                    ).animate().fadeIn(delay: 300.ms);
+                  }
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    itemCount: appointments.length,
+                    itemBuilder: (context, index) {
+                      final appointment = appointments[index];
+                      return AppointmentCard(
+                        appointment: appointment,
+                        onTap: () async {
+                          // Navigate to details and wait for a possible update
+                          final result = await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AppointmentDetailsPage(
+                                appointment: appointment,
+                              ),
+                            ),
+                          );
+                          // If the details page returns true, refresh the list
+                          if (result == true) {
+                            _refreshAppointments();
+                          }
+                        },
+                      )
+                      // This makes each card animate in
+                      .animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.1, duration: 200.ms);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ].animate(interval: 50.ms).fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
       ),
     );
   }

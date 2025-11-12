@@ -139,7 +139,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yourBookings => 'Your Bookings';
 
   @override
-  String get noAppointments => 'You have no upcoming appointments.';
+  String get noAppointments => 'No appointments on this day.';
 
   @override
   String get patientDetails => 'Patient Details';
@@ -178,7 +178,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get other => 'Other';
 
   @override
-  String get selectDate => 'Select Date';
+  String get selectDate => 'Select a date';
 
   @override
   String get selectTime => 'Select Time';
@@ -425,4 +425,108 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get editSchedule => 'Edit Schedule';
+
+  @override
+  String get todayAppointments => 'Today\'s Appointments';
+
+  @override
+  String get welcome => 'Welcome back,';
+
+  @override
+  String get doctorLogin => 'Doctor Portal Login';
+
+  @override
+  String get manageAvailability => 'Manage Availability';
+
+  @override
+  String get appSettings => 'App Settings';
+
+  @override
+  String get darkMode => 'Dark Mode';
+
+  @override
+  String get signOut => 'Sign Out';
+
+  @override
+  String get name => 'Name';
+
+  @override
+  String get age => 'Age';
+
+  @override
+  String get phone => 'Phone';
+
+  @override
+  String get appointmentStatus => 'Appointment Status';
+
+  @override
+  String get statusMissed => 'Missed';
+
+  @override
+  String get medicalReports => 'Medical Reports';
+
+  @override
+  String get uploadNewReport => 'Upload New Report';
+
+  @override
+  String get availability => 'Availability';
+
+  @override
+  String get setYourHours => 'Set your default consulting hours.';
+
+  @override
+  String get startTime => 'Start Time';
+
+  @override
+  String get endTime => 'End Time';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get availabilityUpdated => 'Availability updated!';
+
+  @override
+  String get errorUpdatingAvailability => 'Error updating availability.';
+
+  @override
+  String get manageLeave => 'Manage Leave';
+
+  @override
+  String get selectLeaveDates => 'Select date range to mark as unavailable.';
+
+  @override
+  String get leaveDates => 'Leave Dates';
+
+  @override
+  String get saveLeave => 'Save Leave Dates';
+
+  @override
+  String get leaveUpdated => 'Leave dates updated.';
+
+  @override
+  String get errorLeave => 'Error updating leave';
+
+  @override
+  String get tapToRemove => 'Tap a date to remove it';
+
+  @override
+  String get noLeaveDates => 'You have no leave dates scheduled.';
+
+  @override
+  String get manageLeaveDesc =>
+      'Select single days or a date range to mark as on leave.';
+
+  @override
+  String get scheduledLeave => 'Scheduled Leave Days';
+
+  @override
+  String get availabilityDesc =>
+      'Set your weekly consulting start and end times.';
+
+  @override
+  String get saveAvailability => 'Save Availability';
+
+  @override
+  String get errorAvailability => 'Error saving availability';
 }
