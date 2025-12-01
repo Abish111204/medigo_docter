@@ -1,14 +1,11 @@
-// lib/login_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // For supabase
+import 'package:medigo_doctor/main.dart';
 import 'package:medigo_doctor/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-
-import 'main_screen.dart'; // This file will be created next
+import 'main_screen.dart';
 import 'locale_provider.dart';
 
 class LoginPage extends StatefulWidget {
@@ -37,10 +34,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _signIn(AppLocalizations translations) async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() { _isLoading = true; _errorMessage = null; });
 
     try {
       final response = await supabase.auth.signInWithPassword(
@@ -49,7 +43,6 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (mounted && response.user != null) {
-        // 1. Check if this user is in the 'doctors' table
         final doctorData = await supabase
             .from('doctors')
             .select('user_id, id') 
@@ -57,7 +50,6 @@ class _LoginPageState extends State<LoginPage> {
             .maybeSingle();
 
         if (doctorData != null && mounted) {
-          // 2. Fetch theme and language from 'profiles' table
           try {
             final profileData = await supabase
                 .from('profiles')
@@ -65,158 +57,176 @@ class _LoginPageState extends State<LoginPage> {
                 .eq('id', response.user!.id)
                 .single();
 
-            final themeProvider =
-                Provider.of<ThemeProvider>(context, listen: false);
+            final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
             final savedTheme = profileData['theme'] ?? 'Light';
-            themeProvider.setThemeMode(
-                savedTheme == 'Dark' ? ThemeMode.dark : ThemeMode.light);
+            themeProvider.setThemeMode(savedTheme == 'Dark' ? ThemeMode.dark : ThemeMode.light);
             
             final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
             final savedLang = profileData['language'] ?? 'English';
-            if (savedLang == 'Malayalam') {
-              localeProvider.setLocale(const Locale('ml'));
-            } else if (savedLang == 'Hindi') {
-              localeProvider.setLocale(const Locale('hi'));
-            } else {
-              localeProvider.setLocale(const Locale('en'));
-            }
+            if (savedLang == 'Malayalam') localeProvider.setLocale(const Locale('ml'));
+            else if (savedLang == 'Hindi') localeProvider.setLocale(const Locale('hi'));
+            else localeProvider.setLocale(const Locale('en'));
 
-          } catch (e) {
-            print("Couldn't fetch preferences, using defaults.");
-          }
+          } catch (e) { print("Preferences error: $e"); }
 
-          // 3. Go to the main screen
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const MainScreen()),
           );
         } else {
-          // 4. If not a doctor, sign out and show error
           await supabase.auth.signOut();
           setState(() {
-            _errorMessage = "This account does not have doctor permissions.";
+            _errorMessage = "Access Denied: Doctor account required.";
             _isLoading = false;
           });
         }
       }
     } on AuthException catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = e.message;
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() { _errorMessage = e.message; _isLoading = false; });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = "An unexpected error occurred. Please try again.";
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() { _errorMessage = "Unexpected error: $e"; _isLoading = false; });
     }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final translations = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32.0),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
+      body: Stack(
+        children: [
+          // 1. Background Image
+          Positioned.fill(
+            child: Image.network(
+              'https://images.unsplash.com/photo-1576091160550-2187d80a02ff?auto=format&fit=crop&q=80',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // 2. Gradient Overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    isDark ? Colors.black.withOpacity(0.6) : Colors.white.withOpacity(0.7),
+                    isDark ? Colors.black.withOpacity(0.9) : Colors.white.withOpacity(0.9),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 3. Login Form
+          Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Image.asset( 
-                    'assets/images/logo.png', // Make sure you have this logo
-                    height: 100,
-                  ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.8, 0.8)),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3), width: 2),
+                    ),
+                    child: Icon(
+                      Icons.local_hospital_rounded,
+                      size: 48,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ).animate().scale(duration: 500.ms, curve: Curves.elasticOut),
+                  
                   const SizedBox(height: 16),
                   Text(
-                    translations.doctorLogin, // <-- FIXED KEY
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-                  const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: translations.email,
-                      prefixIcon: const Icon(Icons.email_outlined),
+                    'MediGo Doctor',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).primaryColor,
+                      letterSpacing: 1.0
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty || !value.contains('@')) {
-                        return 'Please enter a valid email';
-                      }
-                      return null;
-                    },
-                    keyboardType: TextInputType.emailAddress,
-                  ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.2),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: translations.password,
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _passwordVisible
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
+                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2, end: 0),
+                  
+                  const SizedBox(height: 40),
+
+                  Card(
+                    elevation: 8,
+                    color: Theme.of(context).cardTheme.color?.withOpacity(0.9),
+                    shadowColor: Colors.black.withOpacity(0.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              translations.doctorLogin,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              translations.signInToContinue,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 32),
+                            
+                            TextFormField(
+                              controller: _emailController,
+                              decoration: InputDecoration(
+                                labelText: translations.email,
+                                prefixIcon: const Icon(Icons.email_outlined),
+                              ),
+                              validator: (value) => (value == null || !value.contains('@')) ? 'Invalid email' : null,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _passwordController,
+                              decoration: InputDecoration(
+                                labelText: translations.password,
+                                prefixIcon: const Icon(Icons.lock_outline),
+                                suffixIcon: IconButton(
+                                  icon: Icon(_passwordVisible ? Icons.visibility : Icons.visibility_off),
+                                  onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                                ),
+                              ),
+                              obscureText: !_passwordVisible,
+                              validator: (value) => (value == null || value.length < 6) ? 'Min 6 chars' : null,
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            if (_errorMessage != null)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(color: Colors.red),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              
+                            ElevatedButton(
+                              onPressed: _isLoading ? null : () => _signIn(translations),
+                              child: _isLoading 
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) 
+                                : Text(translations.signIn.toUpperCase()),
+                            ),
+                          ],
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _passwordVisible = !_passwordVisible;
-                          });
-                        },
                       ),
                     ),
-                    obscureText: !_passwordVisible,
-                    validator: (value) {
-                      if (value == null || value.isEmpty || value.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                  ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.2),
-                  const SizedBox(height: 24),
-                  if (_errorMessage != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ElevatedButton(
-                          onPressed: () => _signIn(translations),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            textStyle: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          child: Text(translations.signIn),
-                        ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.3),
+                  ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.1, end: 0),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

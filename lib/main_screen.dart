@@ -1,14 +1,13 @@
-// lib/main_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:medigo_doctor/l10n/generated/app_localizations.dart';
-import 'package:medigo_doctor/main.dart'; // For supabase
+import 'package:medigo_doctor/main.dart';
 import 'package:medigo_doctor/pages/dashboard_page.dart';
-import 'package:medigo_doctor/pages/profile_page.dart';
+import 'package:medigo_doctor/pages/profile_page.dart'; 
 import 'package:medigo_doctor/pages/schedule_page.dart';
-import 'package:medigo_doctor/pages/settings_page.dart';
+import 'package:medigo_doctor/pages/settings_page.dart'; 
 import 'package:provider/provider.dart';
 import 'theme_provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,7 +19,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   Future<Map<String, dynamic>?>? _doctorProfileFuture;
-  int? _doctorBigId; // This is the 'id' from the doctors table
+  int? _doctorBigId;
 
   @override
   void initState() {
@@ -28,51 +27,27 @@ class _MainScreenState extends State<MainScreen> {
     _doctorProfileFuture = _fetchDoctorProfile();
   }
 
-  // --- vvv THIS FUNCTION IS UPDATED vvv ---
   Future<Map<String, dynamic>?> _fetchDoctorProfile() async {
     final user = supabase.auth.currentUser;
-    if (user == null) {
-      return null;
-    }
+    if (user == null) return null;
     try {
-      // 1. REVERTED: Select 'name' from the doctors table
       final data = await supabase
           .from('doctors')
-          .select('id, name') // <-- CHANGED BACK
+          .select('id, name')
           .eq('user_id', user.id)
-          .maybeSingle(); 
+          .maybeSingle();
 
       if (data != null && mounted) {
         setState(() {
           _doctorBigId = data['id'];
         });
         return data;
-      } else {
-        if (mounted) {
-          print('No doctor record found for user: ${user.id}');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Error: Could not find matching doctor profile.'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return null;
       }
+      return null;
     } catch (e) {
-      print('Error fetching doctor profile: $e');
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error fetching profile: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-      }
       return null;
     }
   }
-  // --- ^^^ THIS FUNCTION IS UPDATED ^^^ ---
 
   void _onItemTapped(int index) {
     setState(() {
@@ -93,11 +68,16 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       appBar: _buildAppBar(context, pageTitles[_selectedIndex], translations),
       body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
           return FadeTransition(
             opacity: animation,
-            child: child,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                  begin: const Offset(0, 0.05), end: Offset.zero)
+                  .animate(animation),
+              child: child,
+            ),
           );
         },
         child: KeyedSubtree(
@@ -112,26 +92,38 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.dashboard_outlined),
-            activeIcon: const Icon(Icons.dashboard),
-            label: translations.dashboard,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.calendar_month_outlined),
-            activeIcon: const Icon(Icons.calendar_month),
-            label: translations.schedule,
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.settings_outlined),
-            activeIcon: const Icon(Icons.settings),
-            label: translations.settings,
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, -5))
+          ],
+        ),
+        child: BottomNavigationBar(
+          items: <BottomNavigationBarItem>[
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.dashboard_outlined),
+              activeIcon: const Icon(Icons.dashboard_rounded),
+              label: translations.dashboard,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.calendar_month_outlined),
+              activeIcon: const Icon(Icons.calendar_month_rounded),
+              label: translations.schedule,
+            ),
+            BottomNavigationBarItem(
+              icon: const Icon(Icons.settings_outlined),
+              activeIcon: const Icon(Icons.settings_rounded),
+              label: translations.settings,
+            ),
+          ],
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          type: BottomNavigationBarType.fixed,
+          showUnselectedLabels: true,
+        ),
       ),
     );
   }
@@ -140,15 +132,21 @@ class _MainScreenState extends State<MainScreen> {
       BuildContext context, String title, AppLocalizations translations) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    final theme = Theme.of(context);
 
     return AppBar(
       leading: _selectedIndex == 0
           ? IconButton(
-              icon: const Icon(Icons.account_circle_outlined),
+              icon: CircleAvatar(
+                backgroundColor: theme.primaryColor.withOpacity(0.1),
+                child: Icon(Icons.person_rounded,
+                    color: theme.primaryColor, size: 20),
+              ),
               tooltip: translations.profile,
               onPressed: () async {
                 final result = await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const ProfilePage()),
+                  // --- FIXED: Removed 'const' keyword ---
+                  MaterialPageRoute(builder: (context) => ProfilePage()),
                 );
                 if (result == true) {
                   setState(() {
@@ -159,64 +157,59 @@ class _MainScreenState extends State<MainScreen> {
             )
           : null,
       title: _selectedIndex == 0
-          // --- vvv THIS WIDGET IS UPDATED vvv ---
           ? FutureBuilder<Map<String, dynamic>?>(
               future: _doctorProfileFuture,
               builder: (context, snapshot) {
-                // 2. REVERTED: Use 'name' from snapshot
-                String name = '...';
-                if (snapshot.hasData && snapshot.data != null) {
-                  name = snapshot.data!['name'] ?? 'Doctor';
-                }
-
+                String name = snapshot.data?['name'] ?? 'Doctor';
                 return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       translations.welcome,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.normal,
                         fontSize: 12,
+                        color: Colors.grey.shade500,
                       ),
                     ),
-                    Text(
-                      name, // <-- CHANGED BACK
-                    ),
+                    Text(name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16))
+                        .animate()
+                        .fadeIn(),
                   ],
                 );
               },
             )
-          // --- ^^^ THIS WIDGET IS UPDATED ^^^ ---
-          : Text(
-              title,
-            ),
+          : Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       actions: [
         IconButton(
           icon: Icon(
-            isDarkMode ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+            isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            color: theme.iconTheme.color,
           ),
           onPressed: () {
             final newMode = isDarkMode ? ThemeMode.light : ThemeMode.dark;
             themeProvider.setThemeMode(newMode);
-            _updateTheme(isDarkMode); // Save preference
+            _updateTheme(isDarkMode);
           },
         ),
+        const SizedBox(width: 8),
       ],
       automaticallyImplyLeading: _selectedIndex != 0,
     );
   }
 
   Future<void> _updateTheme(bool isDark) async {
-    final themeString = !isDark ? 'Dark' : 'Light'; // Toggled value
+    final themeString = !isDark ? 'Dark' : 'Light';
     final userId = supabase.auth.currentUser?.id;
     if (userId == null) return;
     try {
-      await supabase.from('profiles').update({
-        'theme': themeString,
-      }).eq('id', userId);
+      await supabase
+          .from('profiles')
+          .update({'theme': themeString}).eq('id', userId);
     } catch (e) {
-      print('Error saving theme: $e');
+      print(e);
     }
   }
 }
